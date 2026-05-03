@@ -11,14 +11,14 @@ export interface AuthRequest extends Request {
 
 export function authenticateToken(
   req: AuthRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    throw new AppError('Authentication required', 401);
+    return next(new AppError('Authentication required', 401));
   }
 
   try {
@@ -26,7 +26,7 @@ export function authenticateToken(
     req.userId = decoded.userId;
     req.restaurantId = decoded.restaurantId;
     next();
-  } catch (error) {
-    throw new AppError('Invalid or expired token', 403);
+  } catch {
+    next(new AppError('Invalid or expired token', 403));
   }
 }

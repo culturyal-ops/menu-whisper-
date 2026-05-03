@@ -5,14 +5,9 @@ export function errorHandler(
   err: any,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) {
-  logger.error('Error:', {
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method
-  });
+  logger.error('Error:', { message: err.message, path: req.path, method: req.method });
 
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal server error';
