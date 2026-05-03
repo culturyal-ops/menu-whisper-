@@ -1,5 +1,8 @@
 {
-  "buildCommand": "cd frontend-dashboard && npm install && npm run build",
-  "outputDirectory": "frontend-dashboard/.next",
-  "installCommand": "echo 'skipping root install'"
+  "builds": [
+    {
+      "src": "frontend-dashboard/package.json",
+      "use": "@vercel/next"
+    }
+  ]
 }
