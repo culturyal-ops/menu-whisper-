@@ -1,0 +1,59 @@
+{
+  "name": "WhatsApp Message Processor",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract message from WhatsApp webhook\nconst body = $input.item.json.body;\nconst message = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];\n\nif (!message) {\n  return [];\n}\n\nreturn [{\n  json: {\n    from: message.from,\n    text: message.text?.body,\n    messageId: message.id,\n    phoneNumberId: body.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id\n  }\n}];"
+      },
+      "name": "Parse Message",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://backend:3000/api/process-message",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {}
+      },
+      "name": "Process with AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: 'ok' } }}"
+      },
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Parse Message", "type": "main", "index": 0 }]]
+    },
+    "Parse Message": {
+      "main": [[{ "node": "Process with AI", "type": "main", "index": 0 }]]
+    },
+    "Process with AI": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  }
+}

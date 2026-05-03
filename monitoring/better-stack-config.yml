@@ -1,0 +1,57 @@
+# Better Stack (formerly Logtail) monitoring configuration
+# https://betterstack.com/
+
+monitors:
+  - name: Menu Whisper API Health
+    url: https://your-app.railway.app/health
+    method: GET
+    interval: 60 # seconds
+    timeout: 10
+    expected_status: 200
+    regions:
+      - us-east
+      - eu-west
+      - asia-south
+    
+    alerts:
+      - type: down
+        channels:
+          - slack
+          - email
+        threshold: 2 # Alert after 2 consecutive failures
+      
+      - type: slow
+        channels:
+          - slack
+        threshold: 5000 # Alert if response time > 5s
+  
+  - name: WhatsApp Webhook
+    url: https://your-app.railway.app/webhook/whatsapp
+    method: GET
+    interval: 300 # Check every 5 minutes
+    timeout: 5
+    
+  - name: Database Connection
+    url: https://your-app.railway.app/health/ready
+    method: GET
+    interval: 120
+    timeout: 10
+    expected_status: 200
+
+heartbeats:
+  - name: Daily Analytics Cron
+    schedule: "0 23 * * *"
+    grace_period: 300 # 5 minutes
+    
+  - name: Marketing Queue Processor
+    schedule: "*/5 * * * *"
+    grace_period: 120 # 2 minutes
+
+log_sources:
+  - name: Backend Logs
+    platform: railway
+    retention_days: 30
+    
+  - name: Error Logs
+    platform: sentry
+    retention_days: 90

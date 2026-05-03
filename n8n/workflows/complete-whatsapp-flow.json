@@ -1,0 +1,84 @@
+{
+  "name": "Menu Whisper - Complete WhatsApp Flow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "menu-whisper-whatsapp"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract message data\nconst body = $input.item.json.body;\nconst entry = body.entry?.[0];\nconst changes = entry?.changes?.[0];\nconst value = changes?.value;\nconst message = value?.messages?.[0];\n\nif (!message) {\n  return [];\n}\n\nreturn [{\n  json: {\n    from: message.from,\n    messageId: message.id,\n    text: message.text?.body || '',\n    timestamp: message.timestamp,\n    phoneNumberId: value.metadata?.phone_number_id,\n    wabaId: value.metadata?.display_phone_number\n  }\n}];"
+      },
+      "id": "parse-webhook",
+      "name": "Parse Webhook",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.BACKEND_URL }}/api/internal/process-whatsapp",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 25000
+        }
+      },
+      "id": "call-backend",
+      "name": "Process via Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: 'ok', messageId: $json.messageId } }}"
+      },
+      "id": "respond-200",
+      "name": "Respond 200 OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Error handler\nconst error = $input.item.json.error;\n\n// Log to console\nconsole.error('WhatsApp webhook error:', error);\n\n// Send to dead letter queue or Slack\nreturn [{\n  json: {\n    error: error.message,\n    stack: error.stack,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "error-handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 500]
+    }
+  ],
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [[{ "node": "Parse Webhook", "type": "main", "index": 0 }]]
+    },
+    "Parse Webhook": {
+      "main": [[{ "node": "Process via Backend", "type": "main", "index": 0 }]]
+    },
+    "Process via Backend": {
+      "main": [[{ "node": "Respond 200 OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "error-handler"
+  }
+}
