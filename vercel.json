@@ -1,3 +1,5 @@
 {
-  "rootDirectory": "frontend-dashboard"
+  "buildCommand": "cd frontend-dashboard && npm install && npm run build",
+  "outputDirectory": "frontend-dashboard/.next",
+  "installCommand": "echo 'skipping root install'"
 }
