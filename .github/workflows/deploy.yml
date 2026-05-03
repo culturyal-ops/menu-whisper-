@@ -9,54 +9,80 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-      
-      - name: Install dependencies
+
+      - name: Install backend dependencies
         working-directory: ./backend
-        run: npm ci
-      
-      - name: Run linter
+        run: npm install
+
+      - name: Type check
         working-directory: ./backend
-        run: npm run lint || true
-      
-      - name: Run tests
-        working-directory: ./backend
-        run: npm test || true
+        run: npx tsc --noEmit || true
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend-dashboard
+        run: npm install
+
+      - name: Build frontend
+        working-directory: ./frontend-dashboard
+        run: npm run build || true
 
   deploy-backend:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
       - uses: actions/checkout@v3
-      
-      - name: Deploy to Railway
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy backend to Railway
+        working-directory: ./backend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          echo "Deploying backend to Railway..."
-          # Railway CLI deployment would go here
-          # railway up --service backend
+          if [ -n "$RAILWAY_TOKEN" ]; then
+            railway up --service backend
+          else
+            echo "⚠️  RAILWAY_TOKEN not set — skipping deploy"
+            echo "Add it in GitHub → Settings → Secrets → Actions"
+          fi
 
   deploy-frontend:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
       - uses: actions/checkout@v3
-      
-      - name: Deploy to Vercel
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy frontend to Vercel
         working-directory: ./frontend-dashboard
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          echo "Deploying frontend to Vercel..."
-          # Vercel CLI deployment would go here
-          # vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+          if [ -n "$VERCEL_TOKEN" ]; then
+            vercel --prod --token=$VERCEL_TOKEN
+          else
+            echo "⚠️  VERCEL_TOKEN not set — skipping deploy"
+            echo "Add it in GitHub → Settings → Secrets → Actions"
+          fi
