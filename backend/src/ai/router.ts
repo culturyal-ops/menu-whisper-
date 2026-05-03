@@ -64,7 +64,9 @@ export async function processMessage(params: ProcessMessageParams): Promise<AIRe
       restaurant?.ai_tone_config || {}
     );
     const menuContext = buildMenuContext(menuItems || []);
-    const history = buildConversationHistory((conversationHistory || []).reverse());
+    const history = buildConversationHistory(
+      Array.isArray(conversationHistory) ? [...conversationHistory].reverse() : []
+    );
 
     const tier = routeQuery(userMessage);
     let reply: string;
